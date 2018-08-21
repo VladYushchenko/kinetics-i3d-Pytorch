@@ -282,7 +282,7 @@ class I3D(nn.Module):
 
     def __init__(self, num_classes=400, dropout_drop_prob = 0.5, input_channel = 3, spatial_squeeze=True):
         super(I3D, self).__init__()
-        self.features = nn.Sequential(
+        self.features_block = nn.Sequential(
             BasicConv3d(input_channel, 64, kernel_size=7, stride=2, padding=3), # (64, 32, 112, 112)
             nn.MaxPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1)),  # (64, 32, 56, 56)
             BasicConv3d(64, 64, kernel_size=1, stride=1), # (64, 32, 56, 56)
@@ -300,6 +300,9 @@ class I3D(nn.Module):
             Mixed_5b(), # (832, 8, 7, 7)
             Mixed_5c(), # (1024, 8, 7, 7)
             nn.AvgPool3d(kernel_size=(2, 7, 7), stride=1),# (1024, 8, 1, 1)
+        )
+
+        self.logits_block = nn.Sequential(
             nn.Dropout3d(dropout_drop_prob),
             nn.Conv3d(1024, num_classes, kernel_size=1, stride=1, bias=True),# (400, 8, 1, 1)
         )
@@ -307,13 +310,17 @@ class I3D(nn.Module):
         self.softmax = nn.Softmax()
 
     def forward(self, x):
-        logits = self.features(x)
-
+        features = self.features_block(x)
+        logits = self.logits_block(features)
+        print(logits.size())
         if self.spatial_squeeze:
             logits = logits.squeeze(3)
             logits = logits.squeeze(3)
 
+        print(logits.size())
         averaged_logits = torch.mean(logits, 2)
+        print(averaged_logits.size())
+        averaged_logits = torch.squeeze(averaged_logits, 2)
         predictions = self.softmax(averaged_logits)
 
         return predictions, averaged_logits

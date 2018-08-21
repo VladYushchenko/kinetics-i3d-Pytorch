@@ -24,6 +24,7 @@ _CHECKPOINT_PATHS = {
 
 _LABEL_MAP_PATH = 'data/label_map.txt'
 
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -33,30 +34,21 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
-    # Model Parmeters
     parser.add_argument('--eval_type', type=str, default='rgb',
                         help='rgb, flow, or joint')
     parser.add_argument('--imagenet_pretrained', type=str2bool, default='true')
-
-
     args = parser.parse_args()
 
     eval_type = args.eval_type
-
     if eval_type not in ['rgb', 'flow', 'joint']:
         raise ValueError('Bad `eval_type`, must be one of rgb, flow, joint')
 
-
     kinetics_classes = [x.strip() for x in open(_LABEL_MAP_PATH)]
-
-    rgb_logits, flow_logits = (0,0)
+    rgb_logits, flow_logits = (0, 0)
 
     if eval_type in ['rgb', 'joint']:
-
         rgb_i3d = I3D(input_channel=3)
         rgb_i3d.eval()
         if args.imagenet_pretrained:
@@ -71,12 +63,9 @@ if __name__ == '__main__':
         rgb_sample = torch.from_numpy(np.load(_SAMPLE_PATHS['rgb']))
         rgb_sample = Variable(rgb_sample.permute(0, 4, 1, 2 ,3))
         print('RGB data loaded, shape=', str(rgb_sample.data.size()))
-
         rbg_score, rgb_logits = rgb_i3d(rgb_sample)
 
-
     if eval_type in ['flow', 'joint']:
-
         flow_i3d = I3D(input_channel=2)
         flow_i3d.eval()
         if args.imagenet_pretrained:

@@ -30,10 +30,10 @@ def pil_loader(path):
             return img.convert('RGB')
 
 
-def video_loader(video_dir_path, frame_indices, image_loader):
+def video_loader(video_dir_path, frame_indices, image_ext, image_loader):
     video = []
     for i in frame_indices:
-        image_path = os.path.join(video_dir_path, 'image_{:04d}.jpg'.format(i + 1))
+        image_path = os.path.join(video_dir_path, 'image_{:04d}.{}'.format(i + 1, image_ext))
         if os.path.exists(image_path):
             video.append(image_loader(image_path))
         else:
@@ -96,19 +96,6 @@ def make_dataset(root_path, n_video_samples, sample_duration):
                 raise RuntimeError("Length is too short id - {}, len - {}".format(video_path, video_length))
             sample['frame_indices'] = subsequence_idx
             dataset.append(sample)
-            # if n_samples_for_each_video == 1:
-            #     sample['frame_indices'] = list(range(1, n_frames + 1))
-            #
-            # else:
-            #     if n_samples_for_each_video > 1:
-            #         step = max(1, math.ceil((n_frames - 1 - sample_duration) / (n_samples_for_each_video - 1)))
-            #     else:
-            #         step = sample_duration
-            #     for j in range(1, n_frames, step):
-            #         sample_j = copy.deepcopy(sample)
-            #         sample_j['frame_indices'] = list(
-            #             range(j, min(n_frames + 1, j + sample_duration)))
-            #         dataset.append(sample_j)
 
     return dataset, classes
 
@@ -137,9 +124,11 @@ class UCF101(data.Dataset):
                  temporal_transform=None,
                  target_transform=None,
                  sample_duration=16,
-                 get_loader=get_default_video_loader):
+                 get_loader=get_default_video_loader,
+                 ext='jpg'):
         self.data, self.class_names = make_dataset(root_path, n_samples_for_each_video, sample_duration)
 
+        self.ext = ext
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
         self.target_transform = target_transform
@@ -156,7 +145,7 @@ class UCF101(data.Dataset):
         frame_indices = self.data[index]['frame_indices']
         if self.temporal_transform is not None:
             frame_indices = self.temporal_transform(frame_indices)
-        clip = self.loader(path, frame_indices)
+        clip = self.loader(path, frame_indices, self.ext)
         if self.spatial_transform is not None:
             clip = [self.spatial_transform(img) for img in clip]
 

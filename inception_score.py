@@ -15,15 +15,15 @@ from evaluate_sample import _CHECKPOINT_PATHS, str2bool
 from tqdm import tqdm
 
 
-def inception_score(imgs, cuda=True, batch_size=32, splits=1):
-    """Computes the inception score of the generated images imgs
+def inception_score(dataset, cuda=True, batch_size=32, splits=1):
+    """Computes the inception score of the generated images
 
-    imgs -- Torch dataset of (3xHxW) numpy images normalized in the range [-1, 1]
+    dataset -- Torch dataset of (3xHxW) numpy images normalized in the range [-1, 1]
     cuda -- whether or not to run on GPU
     batch_size -- batch size for feeding into Inception v3
     splits -- number of splits
     """
-    N = len(imgs)
+    N = len(dataset)
 
     assert batch_size > 0
     assert N >= batch_size
@@ -37,7 +37,7 @@ def inception_score(imgs, cuda=True, batch_size=32, splits=1):
         dtype = torch.FloatTensor
 
     # Set up dataloader
-    dataloader = torch.utils.data.DataLoader(imgs, batch_size=batch_size)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=4)
 
     # Load inception model
     # model = inception_v3(pretrained=True, transform_input=False).type(dtype)
@@ -98,6 +98,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=2)
     parser.add_argument('--image_size', type=int, default=224, help='Size of center crop')
     parser.add_argument('--imagenet_pretrained', type=str2bool, default='true')
+    parser.add_argument('--ext', default='jpg', help='image extension')
     args = parser.parse_args()
 
     transform = transforms.Compose([
@@ -107,12 +108,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
 
-    images = UCF101(root_path=args.data_root, spatial_transform=transform)
+    dataset = UCF101(root_path=args.data_root, spatial_transform=transform, ext=args.ext)
 
     if not args.splits:
         args.splits = len(os.listdir(args.data_root))
     if not args.batch_size:
-        args.batch_size = len(images) // args.splits
+        args.batch_size = len(dataset) // args.splits
     print('Batch size: {}\nSplits: {}'.format(args.batch_size, args.splits))
     print("Calculating Inception Score...")
-    print(inception_score(images, batch_size=args.batch_size, splits=args.splits))
+    print(inception_score(dataset, batch_size=args.batch_size, splits=args.splits))
